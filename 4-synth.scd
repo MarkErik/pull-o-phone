@@ -148,7 +148,7 @@ SynthDef.new(\sandy, {
 	var sig;
 	sig = PinkNoise.ar(SinOsc.kr(4));
 	sig = LPF.ar(sig, freq);
-	Out.ar([0,1],sig*volume);
+	Out.ar([0,1],sig*volume*0.85);
 }).add;
 )
 
