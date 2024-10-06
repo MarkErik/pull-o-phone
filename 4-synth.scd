@@ -103,7 +103,7 @@ SynthDef(\smallSquare,{
 
 	env = EnvGen.ar(Env.adsr(attackTime, \decayTime.kr(0.3), \sustainLevel.kr(0.9), \releaseTime.kr(0.2)),gate,doneAction:2);
 
-	Out.ar(out,Pan2.ar((0.7*filter+(0.3*filter.distort))*env*amp*volume,SinOsc.kr(pan)));
+	Out.ar(out,Pan2.ar((0.7*filter+(0.3*filter.distort))*env*amp*volume*0.85,SinOsc.kr(pan)));
 
 }).add;
 )
@@ -121,6 +121,7 @@ SynthDef.new(\bigSquare, {
 )
 
 n = Synth.new(\bigSquare);
+n.set(\cutoff, 1600);
 
 (
 SynthDef.new(\circle, {
@@ -145,7 +146,7 @@ c = Synth.new(\circle);
 SynthDef.new(\sandy, {
 	arg freq = 3000, volume = 1; //range from 3000 to 18000
 	var sig;
-	sig = PinkNoise.ar(0.25!2);
+	sig = PinkNoise.ar(SinOsc.kr(4));
 	sig = LPF.ar(sig, freq);
 	Out.ar([0,1],sig*volume);
 }).add;
@@ -153,7 +154,7 @@ SynthDef.new(\sandy, {
 
 d = Synth.new(\sandy);
 
-~val_E = 0;
+
 
 //register Synth with volume 0
 ~synth_E = Synth(\smallSquare, [\freq,~val_E.linexp(0,850, 150,350), \volume,0]);
@@ -173,7 +174,7 @@ d = Synth.new(\sandy);
 
 
 //register Synth with volume 0
-~synth_F = Synth(\bigSquare, [\cutoff,~val_F.linexp(0,750, 600,950), \volume,0]);
+~synth_F = Synth(\bigSquare, [\cutoff,~val_F.linexp(0,750, 600,1600), \volume,0]);
 (
 ~control_F = Routine.new({
 	{
@@ -182,7 +183,7 @@ d = Synth.new(\sandy);
 
 		},
 		{
-			~synth_F.set(\cutoff, ~val_F.linexp(0,750, 600,950), \volume, 1);
+			~synth_F.set(\cutoff, ~val_F.linexp(0,750, 600,1600), \volume, 1);
 		});
 		0.01.wait;
 	}.loop;
