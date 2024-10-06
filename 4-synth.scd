@@ -89,26 +89,38 @@ if value is -1, means that the shape is unplugged, and the corresponding synth s
 ~val_H;
 
 
+
 (
-SynthDef.new(\sawSmall, {
-	arg cutoff=1000, volume=1;
+SynthDef(\smallSquare,{
+	arg out= [0,1], freq = 150, amp = 0.5, gate=1, attackTime= 0.2, fenvamount=16, cutoff= 500, gain=1.0, pan=0.0, volume = 1;
+
+	var osc, filter, env, filterenv, carrfreq;
+
+	osc = Mix(Pulse.ar(freq.lag(0.05)*[1.0,1.001,2.0],Rand(0.45,0.5)!3,0.33));
+
+	filterenv = EnvGen.ar(Env.adsr(attackTime,0.0,1.0,0.2),gate,doneAction:2);
+	filter =  MoogFF.ar(osc,cutoff*(1.0+(fenvamount*filterenv)),gain);
+
+	env = EnvGen.ar(Env.adsr(attackTime, \decayTime.kr(0.3), \sustainLevel.kr(0.9), \releaseTime.kr(0.2)),gate,doneAction:2);
+
+	Out.ar(out,Pan2.ar((0.7*filter+(0.3*filter.distort))*env*amp*volume,SinOsc.kr(pan)));
+
+}).add;
+)
+
+m = Synth.new(\smallSquare);
+
+(
+SynthDef.new(\bigSquare, {
+	arg cutoff=600, volume=1;
 	var sig;
 	sig = Saw.ar([50,51]);
-	sig = RLPF.ar(sig, cutoff.lag(0.02), 0.25,0.2);
-	//sig = HPF(sig, 440);
+	sig = RLPF.ar(sig, cutoff.lag(0.02), 0.25,0.3);
 	Out.ar(0,sig*volume);
 }).add;
 )
 
-(
-SynthDef.new(\sawBig, {
-	arg cutoff=500, volume=1;
-	var sig;
-	sig = Saw.ar([25,26]);
-	sig = RLPF.ar(sig, cutoff.lag(0.02), 0.25,0.2);
-	Out.ar(0,sig*volume);
-}).add;
-)
+n = Synth.new(\bigSquare);
 
 (
 SynthDef.new(\circle, {
@@ -122,10 +134,12 @@ SynthDef.new(\circle, {
 	modfreq= carrfreq*harmonicity;
 
 	sig = SinOsc.ar(carrfreq+(SinOsc.ar(modfreq)*modfreq*modindex), 0.0,0.1);
-	Out.ar(0,sig*volume);
+	Out.ar([0,1],sig*volume);
 
 }).add;
 )
+
+c = Synth.new(\circle);
 
 (
 SynthDef.new(\sandy, {
@@ -133,13 +147,16 @@ SynthDef.new(\sandy, {
 	var sig;
 	sig = PinkNoise.ar(0.25!2);
 	sig = LPF.ar(sig, freq);
-	Out.ar(0,sig*volume);
+	Out.ar([0,1],sig*volume);
 }).add;
 )
 
+d = Synth.new(\sandy);
+
+~val_E = 0;
 
 //register Synth with volume 0
-~synth_E = Synth(\sawSmall, [\cutoff,~val_E.linexp(0,1000, 80,4000), \volume,0]);
+~synth_E = Synth(\smallSquare, [\freq,~val_E.linexp(0,850, 150,350), \volume,0]);
 (
 ~control_E = Routine.new({
 	{
@@ -147,7 +164,7 @@ SynthDef.new(\sandy, {
 			~synth_E.set(\volume, 0);
 		},
 		{
-			~synth_E.set(\cutoff, ~val_E.linexp(0,1000, 80,4000), \volume, 1);
+			~synth_E.set(\freq, ~val_E.linexp(0,850, 150,350), \volume, 1);
 		});
 		0.01.wait;
 	}.loop;
@@ -156,7 +173,7 @@ SynthDef.new(\sandy, {
 
 
 //register Synth with volume 0
-~synth_F = Synth(\sawBig, [\cutoff,~val_F.linexp(0,1000, 80,4000), \volume,0]);
+~synth_F = Synth(\bigSquare, [\cutoff,~val_F.linexp(0,750, 600,950), \volume,0]);
 (
 ~control_F = Routine.new({
 	{
@@ -165,7 +182,7 @@ SynthDef.new(\sandy, {
 
 		},
 		{
-			~synth_F.set(\cutoff, ~val_F.linexp(0,1000, 80,4000), \volume, 1);
+			~synth_F.set(\cutoff, ~val_F.linexp(0,750, 600,950), \volume, 1);
 		});
 		0.01.wait;
 	}.loop;
@@ -175,7 +192,7 @@ SynthDef.new(\sandy, {
 
 
 //register Synth with volume 0
-~synth_G = Synth(\circle, [\harmonicity,~val_G.linexp(0,1000, 1,8), \volume,0]);
+~synth_G = Synth(\circle, [\harmonicity,~val_G.linexp(0,800, 1,8), \volume,0]);
 (
 ~control_G = Routine.new({
 	{
@@ -183,7 +200,7 @@ SynthDef.new(\sandy, {
 			~synth_G.set(\volume, 0);
 		},
 		{
-			~synth_G.set(\harmonicity,~val_G.linexp(0,1000, 1,8), \volume, 1);
+			~synth_G.set(\harmonicity,~val_G.linexp(0,800, 1,8), \volume, 1);
 		});
 		0.01.wait;
 	}.loop;
