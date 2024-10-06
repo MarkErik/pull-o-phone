@@ -6,7 +6,7 @@ Mapping of ascii letters and values from Serial port to Synths
 e - small square box
 f - large square box
 g - medium cylinder
-h - two-tone small square box
+h - sandpaper small square box
 
 if value is -1, means that the shape is unplugged, and the corresponding synth should be silent
 
@@ -21,7 +21,7 @@ If the cable is unplugged, the reading will be 5V, thus will read a value of ~10
 e - small box - resistor value of 2.36K (Red Dot) will give analog Pin reading of: 188
 f - large square box - resistor value of 6.19K (Blue Dot) will give analog Pin reading of:  378
 g - medium cylinder - resistor value of 14.6K (Green Dot) will give analog Pin reading of: ~601-602
-h - two-tone small square box - resistor value of 35K (Purple Dot) will give analog Pin reading of: 801
+h - sandpaper small square box - resistor value of 35K (Purple Dot) will give analog Pin reading of: 801
 
 */
 
@@ -72,12 +72,12 @@ int h_value = -1;
 
 //SET TO TRUE TO PRINT ALL VALUES TO SERIAL PORT WITH PRINTLNS AND LABELS
 //WON'T WORK WITH SUPERCOLLIDER IF SET TO TRUE
-const bool testing = false;
+const bool testing = true;
 
 void setup() {
 
   Serial.begin(115200);
-  delay(10);
+  delay(6);
 
   pinMode(A_sensorPin, INPUT);
   pinMode(B_sensorPin, INPUT);
@@ -103,7 +103,9 @@ void setup() {
   A_LoadCell.start(stabilizingtime, _tare);
   A_LoadCell.setSamplesInUse(1);
   if (A_LoadCell.getTareTimeoutFlag()) {
-    //Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
+    if (testing) {
+      Serial.println("A: Timeout, check MCU>HX711 wiring and pin designations, and restart");
+    }
     while (1)
       ;
   } else {
@@ -116,7 +118,9 @@ void setup() {
   B_LoadCell.start(stabilizingtime, _tare);
   B_LoadCell.setSamplesInUse(1);
   if (B_LoadCell.getTareTimeoutFlag()) {
-    //Serial.println("Timeout, check MCU>HX711 wiring and pin designations");
+    if (testing) {
+      Serial.println("B: Timeout, check MCU>HX711 wiring and pin designations, and restart");
+    }
     while (1)
       ;
   } else {
@@ -151,38 +155,60 @@ void loop() {
 
     if (inRange(A_voltageReading, 1023, v_range) && inRange(B_voltageReading, 1023, v_range)) {
       //nothing plugged into either jack, so no shapes active
-      if(testing)
-      {
+      if (testing) {
         Serial.println("Nothing plugged into jacks.");
       }
       e_value = -1;
       f_value = -1;
       g_value = -1;
       h_value = -1;
-    } else if (A_voltageReading == 0) {
+    } else if (inRange(A_voltageReading, 1023, v_range)) {
       if (inRange(B_voltageReading, e_target, v_range)) {
         e_value = floor(B_data);
+        f_value = -1;
+        g_value = -1;
+        h_value = -1;
       } else if (inRange(B_voltageReading, f_target, v_range)) {
+        e_value = -1;
         f_value = floor(B_data);
+        g_value = -1;
+        h_value = -1;
       } else if (inRange(B_voltageReading, g_target, v_range)) {
+        e_value = -1;
+        f_value = -1;
         g_value = floor(B_data);
+        h_value = -1;
       } else if (inRange(B_voltageReading, h_target, v_range)) {
+        e_value = -1;
+        f_value = -1;
+        g_value = -1;
         h_value = floor(B_data);
       }
     }  //end else if nothing was plugged into jack A, and something was plugged into jack B
-    else if (B_voltageReading == 0) {
+    else if (inRange(B_voltageReading, 1023, v_range)) {
       if (inRange(A_voltageReading, e_target, v_range)) {
         e_value = floor(A_data);
+        f_value = -1;
+        g_value = -1;
+        h_value = -1;
       } else if (inRange(A_voltageReading, f_target, v_range)) {
+        e_value = -1;
         f_value = floor(A_data);
+        g_value = -1;
+        h_value = -1;
       } else if (inRange(A_voltageReading, g_target, v_range)) {
+        e_value = -1;
+        f_value = -1;
         g_value = floor(A_data);
+        h_value = -1;            
       } else if (inRange(A_voltageReading, h_target, v_range)) {
+        e_value = -1;
+        f_value = -1;
+        g_value = -1;
         h_value = floor(A_data);
       }
     }  //end else if nothing was plugged into jack B, and something was plugged into jack A
-    else 
-    {
+    else {
       if (inRange(A_voltageReading, e_target, v_range)) {
         e_value = floor(A_data);
       } else if (inRange(A_voltageReading, f_target, v_range)) {
@@ -202,8 +228,7 @@ void loop() {
       } else if (inRange(B_voltageReading, h_target, v_range)) {
         h_value = floor(B_data);
       }
-
-    }
+    }  //end the final case where there were two objects connected
 
     if (testing) {
       //Print all the data
