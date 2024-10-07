@@ -103,7 +103,7 @@ SynthDef(\smallSquare,{
 
 	env = EnvGen.ar(Env.adsr(attackTime, \decayTime.kr(0.3), \sustainLevel.kr(0.9), \releaseTime.kr(0.2)),gate,doneAction:2);
 
-	Out.ar(out,Pan2.ar((0.7*filter+(0.3*filter.distort))*env*amp*volume*0.85,SinOsc.kr(pan)));
+	Out.ar(out,Pan2.ar((0.7*filter+(0.3*filter.distort))*env*amp*volume*0.75,SinOsc.kr(pan)));
 
 }).add;
 )
@@ -116,7 +116,7 @@ SynthDef.new(\bigSquare, {
 	var sig;
 	sig = Saw.ar([50,51]);
 	sig = RLPF.ar(sig, cutoff.lag(0.02), 0.25,0.3);
-	Out.ar(0,sig*volume);
+	Out.ar(0,sig*volume*0.9);
 }).add;
 )
 
@@ -148,7 +148,7 @@ SynthDef.new(\sandy, {
 	var sig;
 	sig = PinkNoise.ar(SinOsc.kr(4));
 	sig = LPF.ar(sig, freq);
-	Out.ar([0,1],sig*volume*0.85);
+	Out.ar([0,1],sig*volume*0.8);
 }).add;
 )
 
