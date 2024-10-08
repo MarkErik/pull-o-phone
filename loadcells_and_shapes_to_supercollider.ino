@@ -1,22 +1,23 @@
 /*
 
-Mapping of ascii letters and values from Serial port to Synths
-(same between Arduino and SuperCollider)
+This code uses the HX711 Library to read values from two HX711 Analog-to-Digital Converters conencted to Load Cells (I'm using the variables A and B to identify them)
+By default the HX711 library takes 16 samples of data and averages them to get a more accurate value.
+For a more responsive instrument, I set the number of samples to 1, so that we are sending as quick as the data comes in.
+The values from the loadcells are then sent over the Serial Port to be read by SuperCollider, IFF there is a shape connected to the phone jack cables.
+I detect the shapes by using a voltage divider circuit which is read by the Analog Input pins.
 
-e - small square box
-f - large square box
-g - medium cylinder
-h - sandpaper small square box
+Author: Mark Altosaar
+https://github.com/MarkErik/pull-o-phone
 
-if value is -1, means that the shape is unplugged, and the corresponding synth should be silent
+Incorporates Library:
+Read from HX711 ADC (Load Cell): https://github.com/olkal/HX711_ADC
 
-*/
+Voltage Divider Logic
 
-/*
+If the jack has nothing connected to it (e.g. is unplugged), the voltage reading will be 5V,
+thus will read a value of ~1023, and send over serial a value of -1
 
-Voltage divider logic
-
-If the cable is unplugged, the reading will be 5V, thus will read a value of ~1023, and send over serial a value of -1
+The following is the voltage readings assigned to the different shapes.
 
 e - small box - resistor value of 2.36K (Red Dot) will give analog Pin reading of: 188
 f - large square box - resistor value of 6.19K (Blue Dot) will give analog Pin reading of:  378
@@ -24,8 +25,6 @@ g - medium cylinder - resistor value of 14.6K (Green Dot) will give analog Pin r
 h - sandpaper small square box - resistor value of 35K (Purple Dot) will give analog Pin reading of: 801
 
 */
-
-
 
 
 #include <HX711_ADC.h>
@@ -42,7 +41,7 @@ const int e_target = 188;
 const int f_target = 378;
 const int g_target = 601;
 const int h_target = 801;
-const int v_range = 8;
+const int v_range = 8;  // +/-acceptable range for voltage reading
 
 //Loadcell pins:
 const int A_HX711_dout = 4;  //mcu > HX711 dout pin
@@ -65,6 +64,7 @@ int B_sensorPin = A1;      // select the input pin for the voltage divider senso
 int B_voltageReading = 0;  // variable to store the value coming from the sensor
 
 //values to send over the serial port
+//set everything to 'not connected (-1)' at first
 int e_value = -1;
 int f_value = -1;
 int g_value = -1;
@@ -72,7 +72,7 @@ int h_value = -1;
 
 //SET TO TRUE TO PRINT ALL VALUES TO SERIAL PORT WITH PRINTLNS AND LABELS
 //WON'T WORK WITH SUPERCOLLIDER IF SET TO TRUE
-const bool testing = true;
+const bool testing = false;
 
 void setup() {
 
@@ -84,10 +84,6 @@ void setup() {
 
   A_LoadCell.begin();
   B_LoadCell.begin();
-
-  //A_LoadCell.setReverseOutput(); //uncomment to turn a negative output value to positive
-  //B_LoadCell.setReverseOutput(); //uncomment to turn a negative output value to positive
-
 
   float A_calibrationValue = -210.58;  // uncomment this if you want to set the calibration value in the sketch
   float B_calibrationValue = -203.18;  // uncomment this if you want to set the calibration value in the sketch
@@ -124,7 +120,7 @@ void setup() {
     while (1)
       ;
   } else {
-    B_LoadCell.setCalFactor(B_calibrationValue);  // set calibration value (float)
+    B_LoadCell.setCalFactor(B_calibrationValue);
     if (testing) {
       Serial.println("Loadcell B: Startup is complete");
     }
@@ -132,6 +128,7 @@ void setup() {
 }
 
 void loop() {
+  //variables to store whether new data is available from HX711 Load Cell ADC
   static boolean A_newDataReady = 0;
   static boolean B_newDataReady = 0;
 
@@ -150,6 +147,7 @@ void loop() {
       B_data = 0;
     }
 
+    //Read the voltage divider readings to detect if anything plugged into jacks
     A_voltageReading = analogRead(A_sensorPin);
     B_voltageReading = analogRead(B_sensorPin);
 
@@ -200,7 +198,7 @@ void loop() {
         e_value = -1;
         f_value = -1;
         g_value = floor(A_data);
-        h_value = -1;            
+        h_value = -1;
       } else if (inRange(A_voltageReading, h_target, v_range)) {
         e_value = -1;
         f_value = -1;
@@ -231,7 +229,7 @@ void loop() {
     }  //end the final case where there were two objects connected
 
     if (testing) {
-      //Print all the data
+      //Print all the data with labels for easier troubleshooting
       Serial.print("Loadcell A: ");
       Serial.println(A_data);
       Serial.print("Loadcell B:");
@@ -268,8 +266,10 @@ void loop() {
   }  // end if new data was ready on the loadcells
 
   if (testing) {
+    //Increase delay for printing values through the Arduino IDE Serial Monitor
     delay(120);
   } else {
+    //send data over serial quickly for supercollider
     delay(1);
   }
 }  //end main loop
